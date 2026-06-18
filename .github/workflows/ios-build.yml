@@ -20,11 +20,22 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Liệt kê target/scheme (chẩn đoán)
-        run: xcodebuild -list -project ZaloGiamSat.xcodeproj
-
-      - name: Build (iOS Simulator, không cần ký)
+      - name: Build iOS (in lỗi chi tiết qua annotation)
         run: |
+          set +e
+          echo "===== xcodebuild -version ====="
+          xcodebuild -version
+          echo "===== ls ====="
+          ls -la
+          echo "===== xcodebuild -list ====="
+          LIST=$(xcodebuild -list -project ZaloGiamSat.xcodeproj 2>&1); LC=$?
+          echo "$LIST"
+          if [ $LC -ne 0 ]; then
+            MSG="${LIST//$'\n'/%0A}"
+            echo "::error::xcodebuild -list FAILED (exit $LC)%0A${MSG}"
+            exit $LC
+          fi
+          echo "===== xcodebuild build ====="
           xcodebuild \
             -project ZaloGiamSat.xcodeproj \
             -target ZaloGiamSat \
@@ -32,7 +43,15 @@ jobs:
             -sdk iphonesimulator \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
-            build
+            build 2>&1 | tee build.log
+          BC=${PIPESTATUS[0]}
+          if [ $BC -ne 0 ]; then
+            ERR=$(grep -E "error:|fatal error|cannot find|no such module|Command .* failed|does not contain" build.log | tail -40)
+            [ -z "$ERR" ] && ERR=$(tail -40 build.log)
+            MSG="${ERR//$'\n'/%0A}"
+            echo "::error::BUILD FAILED (exit $BC)%0A${MSG}"
+            exit $BC
+          fi
 
       - name: Đóng gói .app cho Simulator (artifact tải về)
         run: |
