@@ -40,14 +40,14 @@ jobs:
             echo "::error::xcodebuild -list FAILED (exit $LC)%0A${MSG}"
             exit $LC
           fi
-          echo "===== xcodebuild build ====="
+          echo "===== xcodebuild build (iphoneos, CHƯA KÝ) ====="
           xcodebuild \
             -project ZaloGiamSat.xcodeproj \
             -scheme ZaloGiamSat \
-            -configuration Debug \
-            -sdk iphonesimulator \
+            -configuration Release \
+            -sdk iphoneos \
             -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             build 2>&1 | tee build.log
           BC=${PIPESTATUS[0]}
           if [ $BC -ne 0 ]; then
@@ -58,14 +58,20 @@ jobs:
             exit $BC
           fi
 
-      - name: Đóng gói .app cho Simulator (artifact tải về)
+      - name: Đóng gói .ipa CHƯA KÝ (để sideload bằng Apple ID free)
         run: |
-          APP=$(find build/Build/Products -name '*.app' -maxdepth 3 | head -n1)
+          set -e
+          APP=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)
           echo "APP=$APP"
-          mkdir -p out && cp -R "$APP" out/
+          rm -rf Payload out
+          mkdir -p Payload out
+          cp -R "$APP" Payload/
+          zip -qry out/ZaloGiamSat-unsigned.ipa Payload
+          ls -la out
 
-      - name: Upload artifact
+      - name: Upload .ipa chưa ký
         uses: actions/upload-artifact@v4
         with:
-          name: ZaloGiamSat-sim-app
-          path: out/
+          name: ZaloGiamSat-unsigned-ipa
+          path: out/ZaloGiamSat-unsigned.ipa
+          if-no-files-found: error
