@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+
+# Claude Code (không cần cho build)
+.claude/
+
+# Xcode project sinh tự động từ project.yml (Cách A). Nếu bạn tạo project thủ công
+# (Cách B trong README) và muốn lưu lại, hãy xóa dòng dưới.
+/ZaloGiamSat.xcodeproj/
+
+# Xcode build
+DerivedData/
+build/
+out/
+*.xcuserstate
+xcuserdata/
+*.ipa
+*.xcarchive

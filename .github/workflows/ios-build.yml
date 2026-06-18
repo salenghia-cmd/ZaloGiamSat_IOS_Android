@@ -1,0 +1,44 @@
+name: iOS Build
+
+# Build app iOS trên máy ảo macOS của GitHub (miễn phí cho repo public).
+# Không cần bạn có máy Mac: mỗi lần push sẽ tự dựng project + biên dịch để bắt lỗi.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:   # cho phép bấm "Run workflow" thủ công
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build (iOS Simulator, không cần ký)
+        run: |
+          xcodebuild \
+            -project ZaloGiamSat.xcodeproj \
+            -scheme ZaloGiamSat \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Đóng gói .app cho Simulator (artifact tải về)
+        run: |
+          APP=$(find build/Build/Products -name '*.app' -maxdepth 3 | head -n1)
+          echo "APP=$APP"
+          mkdir -p out && cp -R "$APP" out/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZaloGiamSat-sim-app
+          path: out/

@@ -1,0 +1,94 @@
+name: iOS Release (signed IPA)
+
+# Archive + KÝ + xuất .ipa trên máy ảo macOS, dùng chứng chỉ/hồ sơ của BẠN nạp qua Secrets.
+# Cần Apple Developer Program trả phí. Xem hướng dẫn tạo Secret trong README.
+on:
+  workflow_dispatch:
+    inputs:
+      method:
+        description: "Phương thức export"
+        default: "ad-hoc"
+        type: choice
+        options: [ad-hoc, development, app-store]
+
+jobs:
+  release:
+    runs-on: macos-14
+    env:
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APP_BUNDLE_ID: ${{ secrets.APP_BUNDLE_ID }}
+      PROFILE_NAME: ${{ secrets.PROVISION_PROFILE_NAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Import certificate + provisioning profile
+        env:
+          DIST_CERT_P12_BASE64: ${{ secrets.DIST_CERT_P12_BASE64 }}
+          DIST_CERT_PASSWORD: ${{ secrets.DIST_CERT_PASSWORD }}
+          PROVISION_PROFILE_BASE64: ${{ secrets.PROVISION_PROFILE_BASE64 }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/app.keychain-db"
+          KPW="$(uuidgen)"
+          security create-keychain -p "$KPW" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KPW" "$KEYCHAIN"
+
+          echo "$DIST_CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -P "$DIST_CERT_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KPW" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+
+          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILE_DIR"
+          echo "$PROVISION_PROFILE_BASE64" | base64 --decode > "$PROFILE_DIR/ci.mobileprovision"
+
+      - name: Generate ExportOptions.plist từ template
+        run: |
+          set -euo pipefail
+          BID="${APP_BUNDLE_ID:-com.zalogiamsat.ios}"
+          sed -e "s/__METHOD__/${{ github.event.inputs.method }}/" \
+              -e "s/__TEAM_ID__/${APPLE_TEAM_ID}/" \
+              -e "s#__BUNDLE_ID__#${BID}#" \
+              -e "s/__PROFILE_NAME__/${PROFILE_NAME}/" \
+              ExportOptions.plist > "$RUNNER_TEMP/ExportOptions.plist"
+          cat "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Archive
+        run: |
+          set -euo pipefail
+          BID="${APP_BUNDLE_ID:-com.zalogiamsat.ios}"
+          xcodebuild \
+            -project ZaloGiamSat.xcodeproj \
+            -scheme ZaloGiamSat \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/ZaloGiamSat.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            PRODUCT_BUNDLE_IDENTIFIER="$BID" \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            archive
+
+      - name: Export IPA
+        run: |
+          set -euo pipefail
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/ZaloGiamSat.xcarchive" \
+            -exportPath "$RUNNER_TEMP/ipa" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZaloGiamSat-ipa
+          path: ${{ runner.temp }}/ipa/*.ipa
+          if-no-files-found: error
