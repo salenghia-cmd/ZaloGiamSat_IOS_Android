@@ -20,13 +20,16 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
+      - name: Liệt kê target/scheme (chẩn đoán)
+        run: xcodebuild -list -project ZaloGiamSat.xcodeproj
+
       - name: Build (iOS Simulator, không cần ký)
         run: |
           xcodebuild \
             -project ZaloGiamSat.xcodeproj \
-            -scheme ZaloGiamSat \
+            -target ZaloGiamSat \
             -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' \
+            -sdk iphonesimulator \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             build
