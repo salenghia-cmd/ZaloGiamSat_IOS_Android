@@ -16,3 +16,13 @@ out/
 xcuserdata/
 *.ipa
 *.xcarchive
+
+# Chữ ký iOS — TUYỆT ĐỐI KHÔNG commit khoá riêng/chứng chỉ
+signing/
+*.p12
+*.key
+*.cer
+*.pem
+*.csr
+*.mobileprovision
+*.b64.txt
