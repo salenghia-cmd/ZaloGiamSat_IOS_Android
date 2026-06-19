@@ -37,6 +37,16 @@ final class LicenseManager: ObservableObject {
 
     struct Outcome { let ok: Bool; let reason: String; let expiry: String; let max: Int }
 
+    /// Mã dòng máy, vd "iPhone10,3" (iPhone X).
+    static let modelIdentifier: String = {
+        var sys = utsname(); uname(&sys)
+        return Mirror(reflecting: sys.machine).children.reduce(into: "") { acc, child in
+            if let v = child.value as? Int8, v != 0 { acc.append(Character(UnicodeScalar(UInt8(v)))) }
+        }
+    }()
+    static let appVersion: String =
+        (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "1.0"
+
     /// Đăng nhập: kiểm tra rồi lưu nếu hợp lệ.
     func login(phone: String, key: String) async -> Outcome {
         let r = await call(action: nil, phone: phone, key: key)
@@ -87,6 +97,11 @@ final class LicenseManager: ObservableObject {
         ]
         if let action { items.append(URLQueryItem(name: "action", value: action)) }
         if action == "ping" { items.append(URLQueryItem(name: "event", value: "online")) }
+        // Telemetry để admin biết máy: iPhone/Android, dòng máy, phiên bản HĐH, phiên bản app.
+        items.append(URLQueryItem(name: "platform", value: "iOS"))
+        items.append(URLQueryItem(name: "model", value: Self.modelIdentifier))
+        items.append(URLQueryItem(name: "os", value: UIDevice.current.systemVersion))
+        items.append(URLQueryItem(name: "appver", value: Self.appVersion))
         comps.queryItems = items
 
         guard let url = comps.url else { return Outcome(ok: false, reason: "BADURL", expiry: "", max: 5) }

@@ -1,71 +1,103 @@
 /**
- * MÁY CHỦ ĐĂNG NHẬP cho app Zalo Giám Sát (Google Apps Script gắn với Google Sheet).
- * App gửi { phone, key } -> script tra trong sheet -> trả JSON { ok, reason, expiry }.
- * Sheet GIỮ RIÊNG TƯ (script chạy bằng quyền của bạn).
+ * MÁY CHỦ ĐĂNG NHẬP + LICENSE cho app Zalo Giám Sát (Android & iOS dùng CHUNG).
+ * App gọi:  GET .../exec?phone=&key=&device=&platform=&model=&os=&appver=
+ *           GET .../exec?action=ping&phone=&event=online&platform=&model=&os=&appver=
+ *           GET .../exec?action=config
  *
- * Cột sheet (hàng 1 là tiêu đề):
- *   A: SoDienThoai | B: MaKichHoat | C: KichHoat (TRUE/FALSE) | D: HanDung (yyyy-mm-dd, trống = vô hạn)
+ * Cột sheet (License = sheet đầu tiên):
+ *  A SDT | B KEY | C NGAYHETHAN | D MATHIETBI | E GHICHU | F LAST_SEEN | G STATUS |
+ *  H TRANG_THAI | I SOZALO | J PLATFORM | K MODEL | L OS | M APP_VER
  *
- * CÁCH DÙNG:
- *   1) Mở Google Sheet -> Extensions (Tiện ích) -> Apps Script
- *   2) Xóa code mẫu, dán toàn bộ file này -> Save
- *   3) Deploy -> New deployment -> type "Web app" -> Execute as: Me, Who has access: Anyone -> Deploy
- *   4) Authorize (cấp quyền) -> copy "Web app URL" (.../exec) gửi cho dev để gắn vào app
+ * Cập nhật code này: dán đè vào Apps Script -> Lưu -> Triển khai -> QUẢN LÝ bản triển khai
+ * -> sửa (bút chì) -> Phiên bản: Phiên bản mới -> Triển khai  (GIỮ NGUYÊN link /exec cũ).
  */
 
+var SHEET_ID = '16ONkjgLDXnW1kNMdD5GhaZl6beSDqrGJgF5kHAjP9ew';
+
+function doGet(e)  { return handle(e); }
 function doPost(e) { return handle(e); }
-function doGet(e)  { return handle(e); } // cho phép mở bằng trình duyệt để test
 
 function handle(e) {
-  var out = { ok: false, reason: "UNKNOWN" };
+  var p = (e && e.parameter) ? e.parameter : {};
+  var out;
   try {
-    var p = (e && e.parameter) ? e.parameter : {};
-    var phone = String(p.phone || "").trim();
-    var key   = String(p.key   || "").trim();
-    if (!phone || !key) { out.reason = "MISSING"; return json(out); }
-
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-    var data  = sheet.getDataRange().getValues();
-
-    for (var i = 1; i < data.length; i++) {            // bỏ hàng tiêu đề
-      var rPhone = String(data[i][0]).trim();
-      if (rPhone !== phone) continue;
-
-      var rKey = String(data[i][1]).trim();
-      if (rKey !== key) { out.reason = "WRONG_KEY"; return json(out); }
-
-      var active = data[i][2];
-      var on = (active === true) ||
-               (String(active).toUpperCase() === "TRUE") ||
-               (String(active) === "1") ||
-               (String(active).toLowerCase() === "x");
-      if (!on) { out.reason = "DISABLED"; return json(out); }
-
-      var han = data[i][3];
-      if (han !== "" && han !== null && han !== undefined) {
-        var d = (han instanceof Date) ? han : new Date(han);
-        if (!isNaN(d.getTime())) {
-          out.expiry = Utilities.formatDate(d, "GMT+7", "yyyy-MM-dd");
-          if (d.getTime() < Date.now()) { out.reason = "EXPIRED"; return json(out); }
-        } else {
-          out.expiry = String(han);
-        }
-      }
-
-      out.ok = true; out.reason = "OK";
-      return json(out);
-    }
-
-    out.reason = "NOT_FOUND";
-    return json(out);
+    if (p.action === 'config') out = getConfig();
+    else if (p.action === 'ping') out = ping((p.phone || '').trim(), (p.event || 'online').trim(), p);
+    else out = check((p.phone || '').trim(), (p.key || '').trim(), (p.device || '').trim(), p);
   } catch (err) {
-    out.reason = "ERR:" + err;
-    return json(out);
+    out = { ok: false, reason: 'ERROR' };
   }
+  return ContentService.createTextOutput(JSON.stringify(out))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
-function json(o) {
-  return ContentService
-    .createTextOutput(JSON.stringify(o))
-    .setMimeType(ContentService.MimeType.JSON);
+function sheet() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  return ss.getSheetByName('License') || ss.getSheets()[0];
+}
+
+function getConfig() {
+  var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Config');
+  var cfg = {};
+  if (sh) {
+    var d = sh.getDataRange().getValues();
+    for (var i = 0; i < d.length; i++) {
+      var k = String(d[i][0] || '').trim();
+      if (k) cfg[k] = String(d[i][1] || '');
+    }
+  }
+  return { ok: true, config: cfg };
+}
+
+function normPhone(s) { return String(s).replace(/\D/g, '').replace(/^0+/, ''); }
+
+/** Ghi LAST_SEEN + thông tin máy (telemetry) cho 1 hàng. row = số hàng thật (1-based). */
+function setInfo(sh, row, p) {
+  try {
+    sh.getRange(row, 6).setValue(new Date());                       // F = LAST_SEEN
+    if (p && p.platform) sh.getRange(row, 10).setValue(p.platform); // J = PLATFORM (iOS/Android)
+    if (p && p.model)    sh.getRange(row, 11).setValue(p.model);    // K = MODEL (vd iPhone10,3)
+    if (p && p.os)       sh.getRange(row, 12).setValue(p.os);       // L = OS (vd 16.7.10)
+    if (p && p.appver)   sh.getRange(row, 13).setValue(p.appver);   // M = APP_VER
+  } catch (e) {}
+}
+
+function ping(phone, event, p) {
+  if (!phone) return { ok: false, reason: 'EMPTY' };
+  var sh = sheet(); var data = sh.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (normPhone(data[i][0]) === normPhone(phone)) {
+      setInfo(sh, i + 1, p);
+      sh.getRange(i + 1, 7).setValue(event || 'online'); // G = STATUS
+      return { ok: true };
+    }
+  }
+  return { ok: false, reason: 'WRONG' };
+}
+
+function check(phone, key, device, p) {
+  if (!phone || !key) return { ok: false, reason: 'EMPTY' };
+  var sh = sheet(); var data = sh.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (normPhone(r[0]) === normPhone(phone) && String(r[1]).trim() === String(key).trim()) {
+      var exp = (r[2] instanceof Date) ? r[2] : new Date(r[2]);
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+      var end = new Date(exp); end.setHours(23, 59, 59, 999);
+      if (end < today) return { ok: false, reason: 'EXPIRED', expiry: fmt(exp) };
+
+      var bound = String(r[3] || '').trim();
+      if (!bound) sh.getRange(i + 1, 4).setValue(device);                 // D: tự gắn máy đầu tiên
+      else if (bound !== device) return { ok: false, reason: 'OTHER_DEVICE', expiry: fmt(exp) };
+
+      setInfo(sh, i + 1, p);                                              // ghi telemetry khi đăng nhập OK
+      return { ok: true, expiry: fmt(exp), max: (parseInt(r[8], 10) || 5) };
+    }
+  }
+  return { ok: false, reason: 'WRONG' };
+}
+
+function fmt(d) {
+  d = (d instanceof Date) ? d : new Date(d);
+  return Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
 }

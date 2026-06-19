@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// Cổng vào app: chưa đăng nhập -> LoginView; đã có license -> DashboardView.
 struct RootView: View {
@@ -27,6 +28,10 @@ struct RootView: View {
                 sessions.startEnabled(store.accounts)
                 license.ping()
             }
+        }
+        // Kiểm tra license định kỳ mỗi 2 phút -> hết hạn / đổi mã / bị khóa thì tự đăng xuất ngay cả khi app đang mở.
+        .onReceive(Timer.publish(every: 120, on: .main, in: .common).autoconnect()) { _ in
+            if license.isLicensed { Task { await license.revalidate() } }
         }
     }
 }
