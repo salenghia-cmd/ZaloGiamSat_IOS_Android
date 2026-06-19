@@ -9,14 +9,11 @@ struct ZaloGiamSatApp: App {
 
     var body: some Scene {
         WindowGroup {
-            DashboardView()
+            RootView()
                 .environmentObject(store)
                 .environmentObject(SessionManager.shared)
                 .environmentObject(NotificationManager.shared)
-                .task {
-                    NotificationManager.shared.configure()
-                    SessionManager.shared.startEnabled(store.accounts)
-                }
+                .environmentObject(LicenseManager.shared)
         }
     }
 }
@@ -43,6 +40,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     func applicationDidEnterBackground(_ application: UIApplication) {
         Task { @MainActor in SessionManager.shared.saveAll() }
         scheduleRefresh()
+    }
+
+    // Quay lại app -> kiểm tra lại license (hết hạn/bị khóa thì tự đăng xuất).
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        Task { @MainActor in await LicenseManager.shared.revalidate() }
     }
 
     private func scheduleRefresh() {

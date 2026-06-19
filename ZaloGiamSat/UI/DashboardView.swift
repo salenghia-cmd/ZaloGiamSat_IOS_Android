@@ -6,6 +6,10 @@ struct DashboardView: View {
     @EnvironmentObject var store: AccountStore
     @EnvironmentObject var sessions: SessionManager
     @EnvironmentObject var notif: NotificationManager
+    @EnvironmentObject var license: LicenseManager
+
+    /// Số Zalo tối đa: nhỏ hơn giữa giới hạn app (10) và giới hạn license (cột I trong sheet).
+    private var effectiveMax: Int { min(Zalo.maxSlots, license.maxAccounts) }
 
     @State private var path: [Account] = []
     @State private var showAdd = false
@@ -41,7 +45,7 @@ struct DashboardView: View {
                         }
                     }
                 } header: {
-                    Text("Tài khoản — \(store.accounts.count)/\(Zalo.maxSlots)")
+                    Text("Tài khoản — \(store.accounts.count)/\(effectiveMax)")
                 } footer: {
                     Text("⚠️ Chỉ dùng cho tài khoản Zalo do CHÍNH BẠN sở hữu/được ủy quyền. Theo dõi Zalo của người khác khi họ không biết là vi phạm pháp luật.")
                         .font(.caption2)
@@ -67,7 +71,7 @@ struct DashboardView: View {
                     Button { newName = ""; showAdd = true } label: {
                         Image(systemName: "plus")
                     }
-                    .disabled(store.accounts.count >= Zalo.maxSlots)
+                    .disabled(store.accounts.count >= effectiveMax)
                 }
             }
             .alert("Thêm Zalo", isPresented: $showAdd) {
@@ -91,7 +95,7 @@ struct DashboardView: View {
                 }
                 Button("Hủy", role: .cancel) { renaming = nil }
             }
-            .sheet(isPresented: $showGuide) { GuideView() }
+            .sheet(isPresented: $showGuide) { GuideView().environmentObject(license) }
         }
         .onChange(of: notif.openSlot) { slot in
             if let slot, let acc = store.account(slot: slot) {

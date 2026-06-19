@@ -7,6 +7,11 @@ enum Zalo {
     static let refreshTaskID = "com.zalogiamsat.ios.refresh"
     static let maxSlots = 10
 
+    /// Máy chủ đăng nhập (Google Apps Script Web App) — DÙNG CHUNG server với bản Android.
+    /// Giao thức: GET ?phone=&key=&device=  -> {ok, reason, expiry, max};  ?action=ping&event=online để heartbeat.
+    static let licenseEndpoint =
+        "https://script.google.com/macros/s/AKfycbzQEWrNkB-vtkkOB8jorEGuv9_L5k2zavUInXkVLnJbX-wC09oo8hKBXzzBdgQsREDL/exec"
+
     /// Giả lập desktop để chat.zalo.me trả giao diện web đầy đủ (giống DESKTOP_UA bản Android).
     static let desktopUA =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +

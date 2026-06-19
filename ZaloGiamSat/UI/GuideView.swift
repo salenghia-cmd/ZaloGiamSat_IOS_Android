@@ -4,6 +4,7 @@ import SwiftUI
 /// Luôn cho xem lại cảnh báo pháp lý + cách đăng nhập + lưu ý chạy nền + phiên bản.
 struct GuideView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var license: LicenseManager
 
     private var appVersion: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -33,6 +34,19 @@ struct GuideView: View {
                     section("Lưu ý chạy nền (iOS)", icon: "exclamationmark.triangle") {
                         bullet("iOS không cho phiên web chạy nền lâu như Android. App nhận tin tức thời khi đang mở / vừa chuyển nền; khi bị treo lâu, iOS chỉ làm tươi số chưa đọc thưa thớt theo lịch của hệ điều hành.")
                         bullet("Bật nhiều phiên tốn RAM/pin — thực tế 4–6 tài khoản là hợp lý; nên cắm sạc khi giám sát liên tục.")
+                    }
+
+                    section("Tài khoản", icon: "person.crop.circle") {
+                        if !license.savedPhone.isEmpty { bullet("Số điện thoại: \(license.savedPhone)") }
+                        if !license.expiry.isEmpty { bullet("Hạn dùng: \(license.expiry)") }
+                        bullet("Số Zalo tối đa: \(license.maxAccounts)")
+                        Button(role: .destructive) {
+                            license.logout()
+                            dismiss()
+                        } label: {
+                            Label("Đăng xuất", systemImage: "rectangle.portrait.and.arrow.right")
+                        }
+                        .padding(.top, 4)
                     }
                 }
                 .padding()
