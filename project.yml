@@ -4,7 +4,7 @@ name: ZaloGiamSat
 options:
   bundleIdPrefix: com.zalogiamsat
   deploymentTarget:
-    iOS: "17.0"            # WKWebsiteDataStore(forIdentifier:) cần iOS 17+
+    iOS: "16.0"            # ho tro iPhone X (toi da iOS 16); co lap phien bang nonPersistent + luu cookie
   createIntermediateGroups: true
 
 targets:

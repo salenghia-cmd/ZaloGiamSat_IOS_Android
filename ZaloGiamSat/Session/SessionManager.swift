@@ -47,6 +47,9 @@ final class SessionManager: ObservableObject {
 
     func clearSession(_ account: Account) { sessions[account.id]?.clearSession() }
 
+    /// Lưu cookie tất cả phiên (gọi khi app vào nền) để giữ đăng nhập.
+    func saveAll() { sessions.values.forEach { $0.saveCookies() } }
+
     func unread(for account: Account) -> Int { unread[account.id] ?? 0 }
 
     private func recomputeTotal() {

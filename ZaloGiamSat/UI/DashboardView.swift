@@ -52,18 +52,18 @@ struct DashboardView: View {
                 AccountWebViewScreen(account: acc)
             }
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button { showGuide = true } label: {
                         Image(systemName: "info.circle")
                     }
                 }
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     if sessions.totalUnread > 0 {
                         Text("● \(sessions.totalUnread)")
                             .foregroundStyle(.red).font(.headline)
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button { newName = ""; showAdd = true } label: {
                         Image(systemName: "plus")
                     }
@@ -93,7 +93,7 @@ struct DashboardView: View {
             }
             .sheet(isPresented: $showGuide) { GuideView() }
         }
-        .onChange(of: notif.openSlot) { _, slot in
+        .onChange(of: notif.openSlot) { slot in
             if let slot, let acc = store.account(slot: slot) {
                 path = [acc]
                 notif.openSlot = nil

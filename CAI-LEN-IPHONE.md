@@ -4,7 +4,8 @@ App này chỉ dùng thông báo nội bộ + WebView (không push từ xa, khô
 bằng Apple ID miễn phí là chạy được**. Hạn chế của Apple ID free: app **hết hạn sau 7 ngày**
 → cài lại là xong (hoặc dùng AltStore để tự gia hạn).
 
-> 📱 iPhone cần **iOS 17 trở lên** (app cô lập phiên Zalo dùng API của iOS 17).
+> 📱 Chạy được trên **iOS 16 trở lên** (đã hạ xuống để hỗ trợ iPhone X). Trên iOS 16, app giữ
+> đăng nhập bằng cách lưu cookie — có thể đôi lúc phải quét lại QR (giới hạn của iOS 16).
 
 ---
 

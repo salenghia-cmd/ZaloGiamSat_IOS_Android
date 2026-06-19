@@ -41,6 +41,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
+        Task { @MainActor in SessionManager.shared.saveAll() }
         scheduleRefresh()
     }
 

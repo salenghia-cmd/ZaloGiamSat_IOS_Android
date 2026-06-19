@@ -22,7 +22,9 @@ final class ZaloSession: NSObject, ObservableObject, WKScriptMessageHandler, WKN
         let config = WKWebViewConfiguration()
         // KHO DỮ LIỆU WEB CÔ LẬP theo tài khoản: cookie/localStorage/IndexedDB riêng biệt.
         // Đây là tương đương iOS của setDataDirectorySuffix("zalo_accN") bên Android.
-        config.websiteDataStore = WKWebsiteDataStore(forIdentifier: account.dataStoreID)
+        // iOS 16: mỗi tài khoản một kho EPHEMERAL riêng -> cô lập để đăng nhập nhiều Zalo song song.
+        // (iOS 16 không có WKWebsiteDataStore(forIdentifier:) như iOS 17 nên ta tự lưu cookie để giữ đăng nhập.)
+        config.websiteDataStore = WKWebsiteDataStore.nonPersistent()
         config.defaultWebpagePreferences.allowsContentJavaScript = true
         config.mediaTypesRequiringUserActionForPlayback = []
 
@@ -52,14 +54,33 @@ final class ZaloSession: NSObject, ObservableObject, WKScriptMessageHandler, WKN
             Task { @MainActor in self?.updateUnread(from: title) }
         }
 
-        load()
+        restoreCookiesThenLoad()
     }
 
     func load() { webView.load(URLRequest(url: Zalo.chatURL)) }
     func reload() { webView.reload() }
 
+    /// Khôi phục cookie đã lưu của tài khoản (giữ đăng nhập) rồi mới nạp trang.
+    private func restoreCookiesThenLoad() {
+        let saved = CookieStore.load(for: account.dataStoreID)
+        guard !saved.isEmpty else { load(); return }
+        let store = webView.configuration.websiteDataStore.httpCookieStore
+        let group = DispatchGroup()
+        for c in saved { group.enter(); store.setCookie(c) { group.leave() } }
+        group.notify(queue: .main) { [weak self] in Task { @MainActor in self?.load() } }
+    }
+
+    /// Lưu cookie hiện tại của phiên (để lần mở sau đỡ phải quét QR lại).
+    func saveCookies() {
+        let id = account.dataStoreID
+        webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { cookies in
+            CookieStore.save(cookies, for: id)
+        }
+    }
+
     /// Đăng xuất: xóa toàn bộ dữ liệu web của tài khoản này rồi nạp lại trang QR.
     func clearSession() {
+        CookieStore.delete(for: account.dataStoreID)
         let store = webView.configuration.websiteDataStore
         let types = WKWebsiteDataStore.allWebsiteDataTypes()
         store.fetchDataRecords(ofTypes: types) { records in
@@ -131,6 +152,14 @@ final class ZaloSession: NSObject, ObservableObject, WKScriptMessageHandler, WKN
         let acc = account
         Task { @MainActor in
             NotificationManager.shared.showNewMessage(account: acc, title: title, body: body)
+        }
+    }
+
+    // Lưu cookie sau khi trang tải xong (bắt phiên đăng nhập ngay sau khi quét QR thành công).
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            self?.saveCookies()
         }
     }
 

@@ -66,8 +66,8 @@ final class AccountStore: ObservableObject {
         let acc = accounts.remove(at: i)
         persist()
         SessionManager.shared.stop(acc)
-        // Xóa luôn kho dữ liệu web cô lập của tài khoản (đăng xuất sạch).
-        WKWebsiteDataStore.remove(forIdentifier: acc.dataStoreID) { _ in }
+        // Xóa cookie đã lưu của tài khoản (đăng xuất sạch).
+        CookieStore.delete(for: acc.dataStoreID)
     }
 
     func account(slot: Int) -> Account? { accounts.first { $0.slot == slot } }

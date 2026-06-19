@@ -17,7 +17,7 @@ struct AccountWebViewScreen: View {
             .navigationTitle(account.displayName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button {
                             sessions.session(for: account).reload()

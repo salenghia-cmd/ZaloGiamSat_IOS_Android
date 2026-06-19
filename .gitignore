@@ -4,6 +4,12 @@
 # Claude Code (không cần cho build)
 .claude/
 
+# File cài đặt tải về (iTunes/iCloud/Sideloadly...) - file lớn, KHÔNG commit
+PhanMem_ZALOIOS_LienQuan/
+*.exe
+*.dmg
+*.zip
+
 # Xcode project sinh tự động từ project.yml (Cách A). Nếu bạn tạo project thủ công
 # (Cách B trong README) và muốn lưu lại, hãy xóa dòng dưới.
 /ZaloGiamSat.xcodeproj/

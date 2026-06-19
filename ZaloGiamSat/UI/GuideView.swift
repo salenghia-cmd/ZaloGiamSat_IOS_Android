@@ -40,7 +40,7 @@ struct GuideView: View {
             .navigationTitle("Hướng dẫn")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Đóng") { dismiss() }
                 }
             }
