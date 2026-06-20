@@ -10,7 +10,7 @@ enum Zalo {
     /// Máy chủ đăng nhập (Google Apps Script Web App) — DÙNG CHUNG server với bản Android.
     /// Giao thức: GET ?phone=&key=&device=  -> {ok, reason, expiry, max};  ?action=ping&event=online để heartbeat.
     static let licenseEndpoint =
-        "https://script.google.com/macros/s/AKfycbzQEWrNkB-vtkkOB8jorEGuv9_L5k2zavUInXkVLnJbX-wC09oo8hKBXzzBdgQsREDL/exec"
+        "https://script.google.com/macros/s/AKfycbxd0yyA51axk9vWPGUZZWwcmocheCKkCJEmAx0ut7HPLDchBNcjoUQnHaFXx8bRmRZM/exec"
 
     /// Giả lập desktop để chat.zalo.me trả giao diện web đầy đủ (giống DESKTOP_UA bản Android).
     static let desktopUA =
