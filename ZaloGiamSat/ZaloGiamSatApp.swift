@@ -14,6 +14,7 @@ struct ZaloGiamSatApp: App {
                 .environmentObject(SessionManager.shared)
                 .environmentObject(NotificationManager.shared)
                 .environmentObject(LicenseManager.shared)
+                .environmentObject(RemoteConfig.shared)
         }
     }
 }

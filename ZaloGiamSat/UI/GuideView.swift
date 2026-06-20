@@ -5,6 +5,7 @@ import SwiftUI
 struct GuideView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var license: LicenseManager
+    @EnvironmentObject var config: RemoteConfig
 
     private var appVersion: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -40,6 +41,7 @@ struct GuideView: View {
                         if !license.savedPhone.isEmpty { bullet("Số điện thoại: \(license.savedPhone)") }
                         if !license.expiry.isEmpty { bullet("Hạn dùng: \(license.expiry)") }
                         bullet("Số Zalo tối đa: \(license.maxAccounts)")
+                        if !config.contact.isEmpty { bullet("Liên hệ hỗ trợ: \(config.contact)") }
                         Button(role: .destructive) {
                             license.logout()
                             dismiss()
@@ -73,9 +75,9 @@ struct GuideView: View {
                 .background(Color(red: 0, green: 0.408, blue: 1.0))
                 .clipShape(RoundedRectangle(cornerRadius: 13))
             VStack(alignment: .leading, spacing: 2) {
-                Text("Zalo Giám Sát").font(.title2).bold()
-                Text("Phiên bản \(appVersion)")
-                    .font(.caption).foregroundStyle(.secondary)
+                Text(config.appName).font(.title2).bold()
+                Text("Phiên bản \(appVersion)" + (config.hasUpdate ? " (có bản mới \(config.latestVersion))" : ""))
+                    .font(.caption).foregroundStyle(config.hasUpdate ? .orange : .secondary)
             }
             Spacer()
         }

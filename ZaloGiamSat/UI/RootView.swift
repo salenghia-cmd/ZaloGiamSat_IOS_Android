@@ -17,6 +17,7 @@ struct RootView: View {
         }
         .task {
             NotificationManager.shared.configure()
+            await RemoteConfig.shared.refresh()
             await license.revalidate()
             if license.isLicensed {
                 sessions.startEnabled(store.accounts)

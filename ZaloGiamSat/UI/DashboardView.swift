@@ -7,6 +7,7 @@ struct DashboardView: View {
     @EnvironmentObject var sessions: SessionManager
     @EnvironmentObject var notif: NotificationManager
     @EnvironmentObject var license: LicenseManager
+    @EnvironmentObject var config: RemoteConfig
 
     /// Số Zalo tối đa: nhỏ hơn giữa giới hạn app (10) và giới hạn license (cột I trong sheet).
     private var effectiveMax: Int { min(Zalo.maxSlots, license.maxAccounts) }
@@ -51,7 +52,7 @@ struct DashboardView: View {
                         .font(.caption2)
                 }
             }
-            .navigationTitle("Zalo Giám Sát")
+            .navigationTitle(config.appName)
             .navigationDestination(for: Account.self) { acc in
                 AccountWebViewScreen(account: acc)
             }
@@ -95,7 +96,9 @@ struct DashboardView: View {
                 }
                 Button("Hủy", role: .cancel) { renaming = nil }
             }
-            .sheet(isPresented: $showGuide) { GuideView().environmentObject(license) }
+            .sheet(isPresented: $showGuide) {
+                GuideView().environmentObject(license).environmentObject(config)
+            }
         }
         .onChange(of: notif.openSlot) { slot in
             if let slot, let acc = store.account(slot: slot) {
